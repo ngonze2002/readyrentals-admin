@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-family: 'Inter', system-ui, sans-serif; }
+  body { @apply bg-surface-0 text-gray-900 antialiased; }
+}
+
+@layer components {
+  /* Scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 99px;
+  }
+
+  /* Table */
+  .rr-table thead th {
+    @apply px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide bg-surface-0 border-b border-gray-100;
+  }
+  .rr-table tbody td {
+    @apply px-4 py-3 text-sm text-gray-700 border-b border-gray-50;
+    vertical-align: middle;
+  }
+  .rr-table tbody tr:last-child td { border-bottom: none; }
+  .rr-table tbody tr:hover td { @apply bg-surface-0; }
+
+  /* Sidebar nav item */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-white/60
+           rounded-none transition-colors duration-100 cursor-pointer w-full;
+  }
+  .nav-link:hover   { @apply bg-white/10 text-white; }
+  .nav-link.active  { @apply bg-white/15 text-white font-medium; }
+
+  /* Card */
+  .rr-card {
+    @apply bg-white rounded-xl border border-gray-100 overflow-hidden;
+  }
+
+  /* Input */
+  .rr-input {
+    @apply w-full px-3 py-2 text-sm border border-gray-200 rounded-lg
+           bg-white text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand
+           transition-colors;
+  }
+
+  /* Select */
+  .rr-select {
+    @apply rr-input appearance-none cursor-pointer;
+  }
+
+  /* Textarea */
+  .rr-textarea {
+    @apply rr-input resize-none;
+  }
+}
