@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/mpesa/expire-boosts",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
