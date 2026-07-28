@@ -5,7 +5,6 @@ import { corsJson, corsOptions }        from '@/lib/mpesa-cors'
 import { FieldValue }                   from 'firebase-admin/firestore'
 import { randomUUID }                   from 'crypto'
 
-// Flutter sends an OPTIONS preflight — must respond 204 or fetch will fail
 export async function OPTIONS() {
   return corsOptions()
 }
@@ -15,28 +14,29 @@ export async function POST(req: NextRequest) {
     const body: {
       userId:      string
       propertyId:  string
-      type:        string
+      packageId:   string   // ← Firestore document ID
+      type:        string   // ← TransactionType enum name (for validation)
       amount:      number
       phone:       string
       description: string
     } = await req.json()
 
-    const { userId, propertyId, type, phone, description } = body
+    const { userId, propertyId, packageId, type, phone, description } = body
 
     // ── Validate ────────────────────────────────────────────
-    if (!userId || !propertyId || !type || !phone) {
+    if (!userId || !propertyId || !packageId || !type || !phone) {
       return corsJson(
-        { error: 'Missing required fields: userId, propertyId, type, phone' },
+        { error: 'Missing required fields: userId, propertyId, packageId, type, phone' },
         { status: 400 },
       )
     }
 
     // Read package pricing from Firestore by document ID
-    const packageDoc = await db.collection('boost_packages').doc(type).get()
+    const packageDoc = await db.collection('boost_packages').doc(packageId).get()
 
     if (!packageDoc.exists) {
       return corsJson(
-        { error: `Boost package not found: ${type}` },
+        { error: `Boost package not found: ${packageId}` },
         { status: 404 },
       )
     }
@@ -50,9 +50,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Optional: validate the client-sent type matches the stored type
+    if (packageData.type !== type) {
+      return corsJson(
+        { error: 'Package type mismatch.' },
+        { status: 400 },
+      )
+    }
+
     const expectedAmount = Number(packageData.price)
 
-    // Daraja accepts 2547XXXXXXXX and 2541XXXXXXXX (Airtel)
     const phoneRegex = /^254[71]\d{8}$/
     if (!phoneRegex.test(phone)) {
       return corsJson(
@@ -62,8 +69,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Duplicate guard ─────────────────────────────────────
-    // If a pending transaction for this user+property+package was
-    // created less than 3 minutes ago, return it instead of re-charging.
     const existingSnap = await db
       .collection(COLLECTIONS.transactions)
       .where('userId',     '==', userId)
@@ -102,7 +107,7 @@ export async function POST(req: NextRequest) {
     await db.collection(COLLECTIONS.transactions).doc(transactionId).set({
       userId,
       propertyId,
-      type,
+      type,                        // ← stores 'boostBronze', etc.
       status:             TX_STATUS.pending,
       amount:             expectedAmount,
       phoneNumber:        phone,
