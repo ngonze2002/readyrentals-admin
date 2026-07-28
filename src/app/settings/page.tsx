@@ -9,63 +9,70 @@ const ADMINS = [
   { name: 'Ops Team',     email: 'ops@readyrentals.co.ke',   role: 'Moderator'   },
 ]
 
-type BoostPackage = {
-  id: string
-  order: number
-  price: number
-}
-
 export default function SettingsPage() {
   const { push, ToastContainer } = useToast()
 
   // Boost pricing state
-  const [packages, setPackages] = useState<BoostPackage[]>([])
+  const [packages, setPackages] = useState<any[]>([])
   const [loadingPricing, setLoadingPricing] = useState(true)
   const [savingPricing, setSavingPricing] = useState(false)
 
-
   useEffect(() => {
-  const loadPricing = async () => {
-    try {
-      setLoadingPricing(true)
+    const loadPricing = async () => {
+      try {
+        setLoadingPricing(true)
 
-      const res = await fetch('/api/settings/boost-packages')
-      if (!res.ok) throw new Error('Failed to load pricing')
+        const res = await fetch('/api/settings/boost-packages')
 
-      const data: BoostPackage[] = await res.json()
-      data.sort((a, b) => a.order - b.order)
+        if (!res.ok) {
+          throw new Error('Failed to load pricing')
+        }
 
-      setPackages(data)
-    } finally {
-      setLoadingPricing(false)
+        const data = await res.json()
+
+        data.sort((a: any, b: any) => a.order - b.order)
+
+        setPackages(data)
+      } catch (err) {
+        console.error(err)
+        push('Failed to load pricing', 'error')
+      } finally {
+        setLoadingPricing(false)
+      }
     }
-  }
 
-  loadPricing()
-}, [])
+    loadPricing()
+  }, [])
 
   const savePricing = async () => {
-  try {
-    setSavingPricing(true)
+    try {
+      setSavingPricing(true)
 
-    const res = await fetch('/api/settings/boost-packages', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        packages.map(({ id, price }) => ({
-          id,
-          price: Number(price),
-        }))
-      ),
-    })
+      const res = await fetch('/api/settings/boost-packages', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          packages.map((p) => ({
+            id: p.id,
+            price: Number(p.price),
+          }))
+        ),
+      })
 
-    if (!res.ok) throw new Error('Save failed')
-  } finally {
-    setSavingPricing(false)
+      if (!res.ok) {
+        throw new Error('Failed')
+      }
+
+      push('Boost pricing updated')
+    } catch (err) {
+      console.error(err)
+      push('Failed to save pricing', 'error')
+    } finally {
+      setSavingPricing(false)
+    }
   }
-}
 
   // Verification rules
   const [autoApprove,  setAutoApprove]  = useState('no')
@@ -95,82 +102,58 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* ── Boost pricing ─────────────────────────────── */}
         <div className="rr-card">
-  <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-      <Zap className="w-4 h-4 text-amber-600" />
-    </div>
-
-    <h3 className="text-sm font-semibold text-gray-900">
-      Boost pricing (KSh)
-    </h3>
-  </div>
-
-  <div className="p-5 space-y-4">
-
-    {loadingPricing ? (
-
-      <div className="py-10 text-center text-gray-500">
-        Loading pricing...
-      </div>
-
-    ) : (
-
-      <>
-
-        <FormRow label="🥉 Bronze — 7 days">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">KSh</span>
-
-            <input
-              type="number"
-              className="rr-input"
-              value={bronze}
-              onChange={(e) => setBronze(e.target.value)}
-            />
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-amber-600" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Boost pricing (KSh)
+            </h3>
           </div>
-        </FormRow>
-
-        <FormRow label="🥈 Silver — 14 days">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">KSh</span>
-
-            <input
-              type="number"
-              className="rr-input"
-              value={silver}
-              onChange={(e) => setSilver(e.target.value)}
-            />
+          <div className="p-5 space-y-4">
+            {loadingPricing ? (
+              <div className="py-10 text-center text-gray-500">
+                Loading pricing...
+              </div>
+            ) : (
+              <>
+                {packages.map((pkg, index) => (
+                  <FormRow
+                    key={pkg.id}
+                    label={`${pkg.emoji} ${pkg.name} — ${pkg.days} days`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        KSh
+                      </span>
+                      <input
+                        type="number"
+                        className="rr-input"
+                        value={pkg.price}
+                        onChange={(e) => {
+                          const copy = [...packages]
+                          copy[index] = {
+                            ...copy[index],
+                            price: Number(e.target.value),
+                          }
+                          setPackages(copy)
+                        }}
+                      />
+                    </div>
+                  </FormRow>
+                ))}
+                <Btn
+                  variant="primary"
+                  icon={<Save className="w-4 h-4" />}
+                  onClick={savePricing}
+                  disabled={savingPricing}
+                >
+                  {savingPricing ? 'Saving...' : 'Save pricing'}
+                </Btn>
+              </>
+            )}
           </div>
-        </FormRow>
-
-        <FormRow label="🥇 Gold — 30 days">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">KSh</span>
-
-            <input
-              type="number"
-              className="rr-input"
-              value={gold}
-              onChange={(e) => setGold(e.target.value)}
-            />
-          </div>
-        </FormRow>
-
-        <Btn
-          variant="primary"
-          icon={<Save className="w-4 h-4" />}
-          onClick={savePricing}
-          disabled={savingPricing}
-        >
-          {savingPricing ? 'Saving...' : 'Save pricing'}
-        </Btn>
-
-      </>
-
-    )}
-
-  </div>
-</div>
+        </div>
 
         {/* ── Verification rules ─────────────────────────── */}
         <div className="rr-card">
