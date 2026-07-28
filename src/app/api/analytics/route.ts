@@ -62,7 +62,12 @@ export async function GET(req: NextRequest) {
     .where('createdAt', '>=', yearAgo)
     .get()
 
-  const boostsPromise = db.collection('boosts').get()
+  // Fetch ALL completed boost transactions for total revenue
+  const txPromise = db
+    .collection('mpesa_transactions')
+    .where('status', '==', 'completed')
+    .where('type', 'in', ['boostBronze', 'boostSilver', 'boostGold'])
+    .get()
 
   // Fetch last 2 months for delta calculations
   const recentPropertiesPromise = db
@@ -75,8 +80,11 @@ export async function GET(req: NextRequest) {
     .where('createdAt', '>=', twoMonthsAgo)
     .get()
 
-  const recentBoostsPromise = db
-    .collection('boosts')
+  // Fetch recent completed boost transactions for revenue delta
+  const recentTxPromise = db
+    .collection('mpesa_transactions')
+    .where('status', '==', 'completed')
+    .where('type', 'in', ['boostBronze', 'boostSilver', 'boostGold'])
     .where('createdAt', '>=', twoMonthsAgo)
     .get()
 
@@ -84,18 +92,18 @@ export async function GET(req: NextRequest) {
     allPropSnap,
     propSnap,
     userSnap,
-    boostSnap,
+    txSnap,
     recentPropSnap,
     recentUserSnap,
-    recentBoostSnap,
+    recentTxSnap,
   ] = await Promise.all([
     allPropertiesPromise,
     yearlyPropertiesPromise,
     usersPromise,
-    boostsPromise,
+    txPromise,
     recentPropertiesPromise,
     recentUsersPromise,
-    recentBoostsPromise,
+    recentTxPromise,
   ])
 
   // ==========================
@@ -132,7 +140,7 @@ export async function GET(req: NextRequest) {
   // Boost Revenue
   // ==========================
 
-  const totalRevenue = boostSnap.docs.reduce(
+  const totalRevenue = txSnap.docs.reduce(
     (sum, doc) => sum + Number(doc.data().amount ?? 0),
     0
   )
@@ -157,14 +165,14 @@ export async function GET(req: NextRequest) {
   const lastMonthStart = months[months.length - 2].start
   const lastMonthEnd = months[months.length - 2].end
 
-  const revenueThisMonth = recentBoostSnap.docs
+  const revenueThisMonth = recentTxSnap.docs
     .filter(doc => {
       const created = new Date(tsToISO(doc.data().createdAt))
       return created >= thisMonthStart && created <= thisMonthEnd
     })
     .reduce((sum, doc) => sum + Number(doc.data().amount ?? 0), 0)
 
-  const revenueLastMonth = recentBoostSnap.docs
+  const revenueLastMonth = recentTxSnap.docs
     .filter(doc => {
       const created = new Date(tsToISO(doc.data().createdAt))
       return created >= lastMonthStart && created <= lastMonthEnd
