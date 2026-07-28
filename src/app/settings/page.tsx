@@ -9,62 +9,63 @@ const ADMINS = [
   { name: 'Ops Team',     email: 'ops@readyrentals.co.ke',   role: 'Moderator'   },
 ]
 
+type BoostPackage = {
+  id: string
+  order: number
+  price: number
+}
+
 export default function SettingsPage() {
   const { push, ToastContainer } = useToast()
 
   // Boost pricing state
-  const [bronze, setBronze] = useState('')
-  const [silver, setSilver] = useState('')
-  const [gold,   setGold]   = useState('')
+  const [packages, setPackages] = useState<BoostPackage[]>([])
   const [loadingPricing, setLoadingPricing] = useState(true)
   const [savingPricing, setSavingPricing] = useState(false)
 
+
   useEffect(() => {
-    const loadPricing = async () => {
-      const res = await fetch('/api/settings/boost-packages')
-      const data = await res.json()
-
-      data.forEach((pkg: any) => {
-        switch (pkg.id) {
-          case 'bronze':
-            setBronze(String(pkg.price))
-            break
-          case 'silver':
-            setSilver(String(pkg.price))
-            break
-          case 'gold':
-            setGold(String(pkg.price))
-            break
-        }
-      })
-    }
-
-    loadPricing()
-  }, [])
-
-  const savePricing = async () => {
+  const loadPricing = async () => {
     try {
-      const res = await fetch('/api/settings/boost-packages', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([
-          { id: 'bronze', price: Number(bronze) },
-          { id: 'silver', price: Number(silver) },
-          { id: 'gold', price: Number(gold) },
-        ]),
-      })
+      setLoadingPricing(true)
 
-      if (!res.ok) {
-        throw new Error()
-      }
+      const res = await fetch('/api/settings/boost-packages')
+      if (!res.ok) throw new Error('Failed to load pricing')
 
-      push('Boost pricing updated')
-    } catch (e) {
-      push('Failed to save pricing', 'error')
+      const data: BoostPackage[] = await res.json()
+      data.sort((a, b) => a.order - b.order)
+
+      setPackages(data)
+    } finally {
+      setLoadingPricing(false)
     }
   }
+
+  loadPricing()
+}, [])
+
+  const savePricing = async () => {
+  try {
+    setSavingPricing(true)
+
+    const res = await fetch('/api/settings/boost-packages', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        packages.map(({ id, price }) => ({
+          id,
+          price: Number(price),
+        }))
+      ),
+    })
+
+    if (!res.ok) throw new Error('Save failed')
+  } finally {
+    setSavingPricing(false)
+  }
+}
 
   // Verification rules
   const [autoApprove,  setAutoApprove]  = useState('no')
