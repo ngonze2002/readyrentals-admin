@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 
 export default withAuth(
   function middleware(req) {
-    // Already authenticated — let through
     return NextResponse.next()
   },
   {
@@ -16,7 +15,13 @@ export default withAuth(
   },
 )
 
-// Protect every route except login and NextAuth internals
+// Protect admin UI and admin API routes.
+// PUBLIC (no auth needed):
+//   /api/mpesa/*  — called by Flutter app, no session cookie
+//   /api/auth/*   — NextAuth internals
+//   /login        — sign-in page
 export const config = {
-  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!login|api/auth|api/mpesa|_next/static|_next/image|favicon.ico).*)',
+  ],
 }
