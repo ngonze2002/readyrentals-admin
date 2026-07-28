@@ -6,11 +6,15 @@ import Link from 'next/link'
 import type { Property, AppUser, Report } from '@/types'
 
 async function getDashboardData() {
-  const [propSnap, userSnap, reportSnap, boostSnap] = await Promise.all([
+  const [propSnap, userSnap, reportSnap, boostSnap, txSnap] = await Promise.all([
     db.collection('properties').orderBy('createdAt', 'desc').limit(100).get(),
     db.collection('users').orderBy('createdAt', 'desc').limit(100).get(),
     db.collection('reports').where('status', '==', 'open').limit(5).get(),
     db.collection('boosts').where('status', '==', 'active').get(),
+    db.collection('mpesa_transactions')
+      .where('status', '==', 'completed')
+      .where('type', 'in', ['boostBronze', 'boostSilver', 'boostGold'])
+      .get(),
   ])
 
   const props    = propSnap.docs.map(d => ({ id: d.id, ...d.data() } as Property))
@@ -20,9 +24,12 @@ async function getDashboardData() {
   const pending  = props.filter(p => !p.isVerified && p.status !== 'rejected')
   const landlords = users.filter(u => u.role === 'landlord')
 
-  const boostRevenue = boostSnap.docs.reduce(
+  // Sum revenue from completed M-Pesa boost transactions
+  const boostRevenue = txSnap.docs.reduce(
     (sum, d) => sum + ((d.data().amount as number) ?? 0), 0,
   )
+
+  const activeBoosts = boostSnap.size
 
   // New this week
   const weekAgo  = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -37,6 +44,7 @@ async function getDashboardData() {
       activeLandlords:     landlords.length,
       openReports:         reports.length,
       boostRevenue,
+      activeBoosts,
       newListingsThisWeek: newProps.length,
       newUsersThisWeek:    newUsers.length,
     },
@@ -98,7 +106,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Boost revenue"
           value={fmtKsh(stats.boostRevenue)}
-          delta="Active campaigns"
+          delta={`${stats.activeBoosts} active campaigns`}
           deltaUp
           icon={<Zap className="w-4 h-4 text-amber-600" />}
           iconBg="bg-amber-50"
