@@ -5,13 +5,6 @@ import { corsJson, corsOptions }        from '@/lib/mpesa-cors'
 import { FieldValue }                   from 'firebase-admin/firestore'
 import { randomUUID }                   from 'crypto'
 
-// Valid transaction types and their server-authoritative amounts (KSh)
-const PACKAGE_AMOUNTS: Record<string, number> = {
-  boostBronze: 500,
-  boostSilver: 800,
-  boostGold:   1200,
-}
-
 // Flutter sends an OPTIONS preflight — must respond 204 or fetch will fail
 export async function OPTIONS() {
   return corsOptions()
@@ -38,14 +31,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Server-side amount — never trust the client value
-    const expectedAmount = PACKAGE_AMOUNTS[type]
-    if (!expectedAmount) {
+    // Read package pricing from Firestore by document ID
+    const packageDoc = await db.collection('boost_packages').doc(type).get()
+
+    if (!packageDoc.exists) {
       return corsJson(
-        { error: `Invalid transaction type: ${type}` },
+        { error: `Boost package not found: ${type}` },
+        { status: 404 },
+      )
+    }
+
+    const packageData = packageDoc.data()!
+
+    if (!packageData.enabled) {
+      return corsJson(
+        { error: 'This boost package is currently disabled.' },
         { status: 400 },
       )
     }
+
+    const expectedAmount = Number(packageData.price)
 
     // Daraja accepts 2547XXXXXXXX and 2541XXXXXXXX (Airtel)
     const phoneRegex = /^254[71]\d{8}$/
