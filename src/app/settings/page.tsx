@@ -19,24 +19,40 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadPricing = async () => {
+      console.log('[Pricing] Starting fetch...')
       try {
         setLoadingPricing(true)
 
-        const res = await fetch('/api/settings/boost-packages')
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000) // 10s safety net
+
+        const res = await fetch('/api/settings/boost-packages', {
+          signal: controller.signal,
+        })
+        clearTimeout(timeout)
+
+        console.log('[Pricing] Response status:', res.status)
 
         if (!res.ok) {
-          throw new Error('Failed to load pricing')
+          const errBody = await res.text()
+          console.error('[Pricing] Error body:', errBody)
+          throw new Error(`Server returned ${res.status}`)
         }
 
         const data = await res.json()
+        console.log('[Pricing] Data received:', data)
 
-        data.sort((a: any, b: any) => a.order - b.order)
+        if (!Array.isArray(data)) {
+          throw new Error('Expected array from API')
+        }
 
+        data.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
         setPackages(data)
-      } catch (err) {
-        console.error(err)
-        push('Failed to load pricing', 'error')
+      } catch (err: any) {
+        console.error('[Pricing] Catch block:', err)
+        push(err.message || 'Failed to load pricing', 'error')
       } finally {
+        console.log('[Pricing] Finally — setting loading to false')
         setLoadingPricing(false)
       }
     }
@@ -47,26 +63,17 @@ export default function SettingsPage() {
   const savePricing = async () => {
     try {
       setSavingPricing(true)
-
       const res = await fetch('/api/settings/boost-packages', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          packages.map((p) => ({
-            id: p.id,
-            price: Number(p.price),
-          }))
+          packages.map((p) => ({ id: p.id, price: Number(p.price) }))
         ),
       })
 
-      if (!res.ok) {
-        throw new Error('Failed')
-      }
-
+      if (!res.ok) throw new Error('Save failed')
       push('Boost pricing updated')
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
       push('Failed to save pricing', 'error')
     } finally {
@@ -115,21 +122,26 @@ export default function SettingsPage() {
               <div className="py-10 text-center text-gray-500">
                 Loading pricing...
               </div>
+            ) : packages.length === 0 ? (
+              <div className="py-10 text-center text-gray-400">
+                No boost packages found.
+                <p className="text-xs mt-1">
+                  Add documents to the <code>boost_packages</code> Firestore collection.
+                </p>
+              </div>
             ) : (
               <>
                 {packages.map((pkg, index) => (
                   <FormRow
                     key={pkg.id}
-                    label={`${pkg.emoji} ${pkg.name} — ${pkg.days} days`}
+                    label={`${pkg.emoji ?? '✨'} ${pkg.name ?? pkg.id} — ${pkg.days ?? '?'} days`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
-                        KSh
-                      </span>
+                      <span className="text-sm text-gray-500">KSh</span>
                       <input
                         type="number"
                         className="rr-input"
-                        value={pkg.price}
+                        value={pkg.price ?? 0}
                         onChange={(e) => {
                           const copy = [...packages]
                           copy[index] = {
