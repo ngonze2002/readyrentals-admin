@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Save, UserPlus, Trash2, Bell, Shield, Zap, Settings } from 'lucide-react'
 import { Btn, FormRow, useToast } from '@/components/ui'
 import { initials } from '@/lib/utils'
@@ -13,9 +13,58 @@ export default function SettingsPage() {
   const { push, ToastContainer } = useToast()
 
   // Boost pricing state
-  const [bronze, setBronze] = useState('500')
-  const [silver, setSilver] = useState('800')
-  const [gold,   setGold]   = useState('1200')
+  const [bronze, setBronze] = useState('')
+  const [silver, setSilver] = useState('')
+  const [gold,   setGold]   = useState('')
+  const [loadingPricing, setLoadingPricing] = useState(true)
+  const [savingPricing, setSavingPricing] = useState(false)
+
+  useEffect(() => {
+    const loadPricing = async () => {
+      const res = await fetch('/api/settings/boost-packages')
+      const data = await res.json()
+
+      data.forEach((pkg: any) => {
+        switch (pkg.id) {
+          case 'bronze':
+            setBronze(String(pkg.price))
+            break
+          case 'silver':
+            setSilver(String(pkg.price))
+            break
+          case 'gold':
+            setGold(String(pkg.price))
+            break
+        }
+      })
+    }
+
+    loadPricing()
+  }, [])
+
+  const savePricing = async () => {
+    try {
+      const res = await fetch('/api/settings/boost-packages', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          { id: 'bronze', price: Number(bronze) },
+          { id: 'silver', price: Number(silver) },
+          { id: 'gold', price: Number(gold) },
+        ]),
+      })
+
+      if (!res.ok) {
+        throw new Error()
+      }
+
+      push('Boost pricing updated')
+    } catch (e) {
+      push('Failed to save pricing', 'error')
+    }
+  }
 
   // Verification rules
   const [autoApprove,  setAutoApprove]  = useState('no')
@@ -45,52 +94,82 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* ── Boost pricing ─────────────────────────────── */}
         <div className="rr-card">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-amber-600" />
-            </div>
-            <h3 className="text-sm font-semibold text-gray-900">Boost pricing (KSh)</h3>
+  <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+      <Zap className="w-4 h-4 text-amber-600" />
+    </div>
+
+    <h3 className="text-sm font-semibold text-gray-900">
+      Boost pricing (KSh)
+    </h3>
+  </div>
+
+  <div className="p-5 space-y-4">
+
+    {loadingPricing ? (
+
+      <div className="py-10 text-center text-gray-500">
+        Loading pricing...
+      </div>
+
+    ) : (
+
+      <>
+
+        <FormRow label="🥉 Bronze — 7 days">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">KSh</span>
+
+            <input
+              type="number"
+              className="rr-input"
+              value={bronze}
+              onChange={(e) => setBronze(e.target.value)}
+            />
           </div>
-          <div className="p-5 space-y-4">
-            <FormRow label="🥉 Bronze — 7 days">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 shrink-0">KSh</span>
-                <input
-                  type="number"
-                  className="rr-input"
-                  value={bronze}
-                  onChange={e => setBronze(e.target.value)}
-                />
-              </div>
-            </FormRow>
-            <FormRow label="🥈 Silver — 14 days">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 shrink-0">KSh</span>
-                <input
-                  type="number"
-                  className="rr-input"
-                  value={silver}
-                  onChange={e => setSilver(e.target.value)}
-                />
-              </div>
-            </FormRow>
-            <FormRow label="🥇 Gold — 30 days">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 shrink-0">KSh</span>
-                <input
-                  type="number"
-                  className="rr-input"
-                  value={gold}
-                  onChange={e => setGold(e.target.value)}
-                />
-              </div>
-            </FormRow>
-            <Btn variant="primary" icon={<Save className="w-4 h-4" />}
-              onClick={() => push('Boost pricing updated')}>
-              Save pricing
-            </Btn>
+        </FormRow>
+
+        <FormRow label="🥈 Silver — 14 days">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">KSh</span>
+
+            <input
+              type="number"
+              className="rr-input"
+              value={silver}
+              onChange={(e) => setSilver(e.target.value)}
+            />
           </div>
-        </div>
+        </FormRow>
+
+        <FormRow label="🥇 Gold — 30 days">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">KSh</span>
+
+            <input
+              type="number"
+              className="rr-input"
+              value={gold}
+              onChange={(e) => setGold(e.target.value)}
+            />
+          </div>
+        </FormRow>
+
+        <Btn
+          variant="primary"
+          icon={<Save className="w-4 h-4" />}
+          onClick={savePricing}
+          disabled={savingPricing}
+        >
+          {savingPricing ? 'Saving...' : 'Save pricing'}
+        </Btn>
+
+      </>
+
+    )}
+
+  </div>
+</div>
 
         {/* ── Verification rules ─────────────────────────── */}
         <div className="rr-card">
