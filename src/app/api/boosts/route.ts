@@ -59,13 +59,16 @@ export async function GET(req: NextRequest) {
 
     return {
       id: d.id,
+      propertyId: raw.propertyId ?? '',
       propertyTitle: property?.title ?? 'Untitled',
       landlordName:
         property?.landlordName ??
         property?.ownerName ??
         property?.userName ??
         'Unknown',
-      package: PACKAGE_NAMES[raw.type] ?? 'Boost',
+      landlordId:
+        property?.landlordId ?? property?.ownerId ?? property?.userId ?? '',
+      package: (PACKAGE_NAMES[raw.type] ?? 'Bronze') as 'Bronze' | 'Silver' | 'Gold',
       amount: Number(tx?.amount ?? 0),
       status: raw.status ?? 'expired',
       startDate: toIso(raw.startDate),
