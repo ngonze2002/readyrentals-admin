@@ -10,12 +10,20 @@ export async function GET(req: NextRequest) {
 
   const snap = await db.collection('boosts').orderBy('startDate', 'desc').get()
 
-  const data: Boost[] = snap.docs.map(d => ({
-    id: d.id,
-    ...(d.data() as Omit<Boost, 'id'>),
-    startDate: tsToISO(d.data().startDate),
-    endDate:   tsToISO(d.data().endDate),
-  }))
+  const data: Boost[] = snap.docs.map(d => {
+    const raw = d.data() as Record<string, any>
+
+    return {
+      id: d.id,
+      propertyTitle: raw.propertyTitle ?? 'Untitled',
+      landlordName:  raw.landlordName  ?? 'Unknown',
+      package:       raw.package       ?? 'Bronze',
+      amount:        Number(raw.amount ?? 0),
+      status:        raw.status        ?? 'expired',
+      startDate:     tsToISO(raw.startDate) ?? '',
+      endDate:       tsToISO(raw.endDate)   ?? '',
+    } as Boost
+  })
 
   return NextResponse.json({ data })
 }

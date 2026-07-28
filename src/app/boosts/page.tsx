@@ -14,13 +14,14 @@ export default function BoostsPage() {
     fetch('/api/boosts')
       .then(r => r.json())
       .then(j => setItems(j.data ?? []))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [])
 
   const active  = items.filter(b => b.status === 'active')
   const expired = items.filter(b => b.status === 'expired')
-  const revenue = active.reduce((s, b) => s + b.amount, 0)
-  const total   = items.reduce((s, b) => s + b.amount, 0)
+  const revenue = active.reduce((s, b) => s + (b.amount ?? 0), 0)
+  const total   = items.reduce((s, b) => s + (b.amount ?? 0), 0)
 
   const pkgColor: Record<string, string> = {
     Bronze: 'bg-amber-50  text-amber-700  border-amber-200',
@@ -109,9 +110,15 @@ export default function BoostsPage() {
                       {b.package}
                     </span>
                   </td>
-                  <td className="font-semibold text-gray-900">{fmtKsh(b.amount)}</td>
-                  <td className="text-gray-500 whitespace-nowrap">{fmtDate(b.startDate)}</td>
-                  <td className="text-gray-500 whitespace-nowrap">{fmtDate(b.endDate)}</td>
+                  <td className="font-semibold text-gray-900">
+                    {fmtKsh(b.amount ?? 0)}
+                  </td>
+                  <td className="text-gray-500 whitespace-nowrap">
+                    {b.startDate ? fmtDate(b.startDate) : '—'}
+                  </td>
+                  <td className="text-gray-500 whitespace-nowrap">
+                    {b.endDate ? fmtDate(b.endDate) : '—'}
+                  </td>
                   <td>
                     <Badge status={b.status === 'active' ? 'active' : 'expired'}>
                       {b.status}
