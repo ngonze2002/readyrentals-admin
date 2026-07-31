@@ -1,5 +1,13 @@
 // ── Property ───────────────────────────────────────────────
-export type PropertyStatus = 'pending' | 'verified' | 'rejected' | 'occupied' | 'vacant'
+export type PropertyStatus =
+  | 'pending'
+  | 'verified'
+  | 'rejected'
+  | 'occupied'
+  | 'vacant'
+  | 'active'
+  | 'under_review'
+  | 'removed'
 
 export interface Property {
   id: string
@@ -62,6 +70,13 @@ export interface Report {
   createdAt: string
   resolvedAt?: string
   adminNote?: string
+  resolution?: 'contact' | 'flag' | 'remove' | 'ban' | 'dismiss'
+  reviewedBy?: string
+  reviewedAt?: string
+  reversedAction?: 'unflag' | 'restore' | 'unsuspend'
+  reversedAt?: string
+  reversedBy?: string
+  reversalNote?: string
 }
 
 // ── Boost ──────────────────────────────────────────────────
