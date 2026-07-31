@@ -1,12 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-// next-auth may not be available in all environments; ignore missing module types
-// @ts-ignore
 import { signOut, useSession } from 'next-auth/react'
 import {
   LayoutDashboard, BadgeCheck, Flag, Users, Building2,
-  Zap, BarChart3, Settings, LogOut, Home,
+  Zap, BarChart3, Settings, LogOut, Home, Mail,
 } from 'lucide-react'
 import { cn, initials } from '@/lib/utils'
 
@@ -24,6 +22,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
   { section: 'Moderation', items: [
     { href: '/verify',     label: 'Verify listings',  icon: BadgeCheck, badge: 'pending' },
     { href: '/reports',    label: 'Reports',          icon: Flag,       badge: 'reports' },
+    { href: '/support',    label: 'Contact requests', icon: Mail,       badge: 'contact' },
   ]},
   { section: 'Data', items: [
     { href: '/users',      label: 'Users',            icon: Users },
@@ -41,15 +40,17 @@ const NAV: { section: string; items: NavItem[] }[] = [
 interface SidebarProps {
   pendingCount?: number
   reportsCount?: number
+  contactCount?: number
 }
 
-export function Sidebar({ pendingCount = 0, reportsCount = 0 }: SidebarProps) {
+export function Sidebar({ pendingCount = 0, reportsCount = 0, contactCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
 
   const badgeVal = (key: string) => {
     if (key === 'pending') return pendingCount
     if (key === 'reports') return reportsCount
+    if (key === 'contact') return contactCount
     return 0
   }
 

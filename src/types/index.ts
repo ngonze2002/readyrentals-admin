@@ -79,6 +79,23 @@ export interface Report {
   reversalNote?: string
 }
 
+// ── Contact requests (Flutter "Contact us" form) ───────────
+export type ContactRequestStatus = 'new' | 'read' | 'resolved'
+
+export interface ContactRequest {
+  id: string
+  uid?: string
+  name: string
+  email: string
+  category: string
+  message: string
+  status: ContactRequestStatus
+  createdAt: string
+  resolvedAt?: string
+  resolvedBy?: string
+  adminNote?: string
+}
+
 // ── Boost ──────────────────────────────────────────────────
 export type BoostStatus = 'active' | 'expired'
 

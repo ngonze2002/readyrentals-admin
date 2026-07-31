@@ -1,11 +1,15 @@
 'use client'
+import Link from 'next/link'
 import { Bell, Search } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { initials } from '@/lib/utils'
 
-interface TopbarProps { title: string }
+interface TopbarProps {
+  title: string
+  contactCount?: number
+}
 
-export function Topbar({ title }: TopbarProps) {
+export function Topbar({ title, contactCount = 0 }: TopbarProps) {
   const { data: session } = useSession()
   return (
     <header className="h-13 flex items-center gap-4 px-6 bg-white border-b border-gray-100 shrink-0">
@@ -21,10 +25,19 @@ export function Topbar({ title }: TopbarProps) {
         />
       </div>
 
-      <button className="relative text-gray-400 hover:text-gray-600 transition-colors">
+      <Link
+        href="/support"
+        className="relative text-gray-400 hover:text-gray-600 transition-colors"
+        title={contactCount > 0 ? `${contactCount} new contact request${contactCount !== 1 ? 's' : ''}` : 'Contact requests'}
+      >
         <Bell className="w-5 h-5" />
-        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full" />
-      </button>
+        {contactCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center
+                            bg-red-500 text-white text-[10px] font-semibold rounded-full leading-none">
+            {contactCount > 9 ? '9+' : contactCount}
+          </span>
+        )}
+      </Link>
 
       <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center
                       text-xs font-semibold text-brand cursor-pointer">
