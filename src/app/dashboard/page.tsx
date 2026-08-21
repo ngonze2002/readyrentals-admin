@@ -1,12 +1,12 @@
 import { db, tsToISO } from '@/lib/firebase-admin'
 import { fmtDate, fmtKsh, initials } from '@/lib/utils'
-import { Building2, Users, Clock, Flag, Zap, BadgeCheck } from 'lucide-react'
+import { Building2, Users, Clock, Flag, Zap, BadgeCheck, Mail, FileText, ArrowRight } from 'lucide-react'
 import { StatCard, Badge, Table } from '@/components/ui'
 import Link from 'next/link'
 import type { Property, AppUser, Report } from '@/types'
 
 async function getDashboardData() {
-  const [propSnap, userSnap, reportSnap, boostSnap, txSnap] = await Promise.all([
+  const [propSnap, userSnap, reportSnap, boostSnap, txSnap, contactSnap] = await Promise.all([
     db.collection('properties').orderBy('createdAt', 'desc').limit(100).get(),
     db.collection('users').orderBy('createdAt', 'desc').limit(100).get(),
     db.collection('reports').where('status', '==', 'open').limit(5).get(),
@@ -15,6 +15,7 @@ async function getDashboardData() {
       .where('status', '==', 'completed')
       .where('type', 'in', ['boostBronze', 'boostSilver', 'boostGold'])
       .get(),
+    db.collection('contact_submissions').where('status', '==', 'new').count().get(),
   ])
 
   const props    = propSnap.docs.map(d => ({ id: d.id, ...d.data() } as Property))
@@ -47,6 +48,7 @@ async function getDashboardData() {
       activeBoosts,
       newListingsThisWeek: newProps.length,
       newUsersThisWeek:    newUsers.length,
+      newContactRequests:  contactSnap.data().count,
     },
     pendingListings: pending.slice(0, 5) as Property[],
     recentUsers:     users.slice(0, 6) as AppUser[],
@@ -111,6 +113,48 @@ export default async function DashboardPage() {
           icon={<Zap className="w-4 h-4 text-amber-600" />}
           iconBg="bg-amber-50"
         />
+      </div>
+
+      {/* Quick Actions / Management Tools */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Contact Requests */}
+        <Link href="/contact" className="group">
+          <div className="rr-card p-5 flex items-center gap-4 hover:border-brand/30 transition-colors">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <Mail className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900">Contact Requests</h3>
+                {stats.newContactRequests > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                    {stats.newContactRequests} new
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                View and respond to messages from app users
+              </p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+          </div>
+        </Link>
+
+        {/* Legal Documents */}
+        <Link href="/legal" className="group">
+          <div className="rr-card p-5 flex items-center gap-4 hover:border-brand/30 transition-colors">
+            <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+              <FileText className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900">Legal Documents</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Manage privacy policy, terms, and other legal pages
+              </p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
+          </div>
+        </Link>
       </div>
 
       {/* Two-col row */}
